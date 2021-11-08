@@ -1,119 +1,67 @@
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
 const cssFiles = [];
 
-fs.readFile(path.join(__dirname, 'template.html'), function (err, data) {
-  if (err) {
-    return console.log(err);
+const createDist = async function () {
+  await fs.mkdir(path.join(__dirname, 'project-dist'), { recursive: true });
+};
+
+const mergeStyles = async function () {
+  await fs.writeFile(path.join(__dirname, 'project-dist', 'style.css'), '');
+  const files = await fs.readdir(path.join(__dirname, 'styles'), { withFileTypes: true });
+  for (const item of files) {
+    if (path.extname(item.name) == '.css') {
+      cssFiles.push(item);
+    }
   }
-
-  const createDist = function () {
-    fs.mkdir(path.join(__dirname, 'project-dist'), { recursive: true }, function (err) {
-      if (err) {
-        return console.log(err);
-      }
-    });
+  for (const item of cssFiles) {
+    const css = await fs.readFile(path.join(__dirname, 'styles', item.name));
+    await fs.appendFile(path.join(__dirname, 'project-dist', 'style.css'), css + '\n\n');
   }
+};
 
-  const mergeStyles = function () {
-    fs.writeFile(path.join(__dirname, 'project-dist', 'style.css'), '', function (err) {
-      if (err) {
-        return console.log(err);
-      }
-    });
-
-    fs.readdir(path.join(__dirname, 'styles'), { withFileTypes: true }, function (err, files) {
-      if (err) {
-        return console.log(err);
-      }
-      files.forEach(item => {
-        if (path.extname(item.name) == '.css') {
-          cssFiles.push(item);
-        }
-      });
-      cssFiles.forEach(item => {
-        let readableStream = fs.createReadStream(path.join(__dirname, 'styles', item.name));
-        readableStream.on('data', function (chunk) {
-          fs.appendFile(path.join(__dirname, 'project-dist', 'style.css'), chunk + '\n\n', function (err) {
-            if (err) {
-              return console.log(err);
-            }
-          });
-        });
-      });
-    });
-  };
-
-  const copyFolder = function (dir) {
-    fs.mkdir(path.join(__dirname, 'project-dist', dir), { recursive: true }, function (err) {
-      if (err) {
-        return console.log(err);
-      }
-    });
-    fs.readdir(path.join(__dirname, dir), { withFileTypes: true }, function (err, files) {
-      if (err) {
-        return console.log(err);
-      }
-      files.forEach(item => {
-        if (item.isFile()) {
-          copyFile(dir, item.name);
-        } else {
-          copyFolder(dir + '/' + item.name);
-        }
-      })
-    });
-  };
-
-  const copyFile = function (dir, item) {
-    fs.copyFile(path.resolve(__dirname, dir, item), path.resolve(__dirname, 'project-dist', dir, item), function (err) {
-      if (err) {
-        return console.log(err);
-      }
-    });
-  };
-
-  const getTemplates = function () {
-    fs.readdir(path.join(__dirname, 'components'), { withFileTypes: true }, function (err, files) {
-      if (err) {
-        return console.log(err);
-      }
-      files.forEach(item => {
-        if (item.isFile()) {
-          if (path.extname(item.name) == '.html') {
-            getTemplateHTML(item.name.split('.').slice(0, -1).join('.'));
-          }
-        }
-      });
-    });
-  };
-
-  const getTemplateHTML = function (template) {
-    let templateHTML;
-    const readableStream = fs.createReadStream(path.join(__dirname, 'components', `${template}.html`));
-    readableStream.on('data', function (chunk) {
-      templateHTML = chunk.toString();
-      data = data.toString().replace(`{{${template}}}`, templateHTML);
-      changeTemplate()
-    });
-  };
-
-  const changeTemplate = function () {
-    fs.writeFile(path.join(__dirname, 'project-dist', 'index.html'), data, function (err) {
-      if (err) {
-        return console.log(err);
-      }
-    });
+const copyFolder = async function (dir) {
+  await fs.mkdir(path.join(__dirname, 'project-dist', dir), { recursive: true });
+  const files = await fs.readdir(path.join(__dirname, dir), { withFileTypes: true });
+  for (const item of files) {
+    if (item.isFile()) {
+      await copyFile(dir, item.name);
+    } else {
+      await copyFolder(dir + '/' + item.name);
+    }
   }
+};
 
-  createDist();
-  mergeStyles();
-  copyFolder('assets');
-  getTemplates();
-});
+const copyFile = async function (dir, item) {
+  await fs.copyFile(path.resolve(__dirname, dir, item), path.resolve(__dirname, 'project-dist', dir, item));
+};
+
+const changeTemplate = async function () {
+  let data = await fs.readFile(path.join(__dirname, 'template.html'));
+  const templates = await fs.readdir(path.join(__dirname, 'components'), { withFileTypes: true });
+  for (const item of templates) {
+    if (item.isFile()) {
+      if (path.extname(item.name) == '.html') {
+        const tempName = item.name.split('.').slice(0, -1).join('.');
+        const templateHTML = await fs.readFile(path.join(__dirname, 'components', `${tempName}.html`));
+        data = data.toString().replace(`{{${tempName}}}`, templateHTML);
+        await fs.writeFile(path.join(__dirname, 'project-dist', 'index.html'), data);
+      }
+    }
+  }
+}
+
+async function buildPage() {
+  try {
+    await createDist();
+    await mergeStyles();
+    await copyFolder('assets');
+    await changeTemplate();
+
+  } catch (e) {
+    console.error(e);
+  }
+}
 
 
-
-
-
-
-
+buildPage();

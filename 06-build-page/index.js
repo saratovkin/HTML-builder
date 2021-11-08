@@ -92,14 +92,12 @@ fs.readFile(path.join(__dirname, 'template.html'), function (err, data) {
     const readableStream = fs.createReadStream(path.join(__dirname, 'components', `${template}.html`));
     readableStream.on('data', function (chunk) {
       templateHTML = chunk.toString();
-      changeTemplate(template, templateHTML);
+      data = data.toString().replace(`{{${template}}}`, templateHTML);
+      changeTemplate()
     });
   };
 
-  const changeTemplate = function (template, templateHTML) {
-    data = data.toString().replace(`{{${template}}}`, templateHTML);
-    fs.truncate(path.join(__dirname, 'project-dist', 'index.html'), function () {
-    });
+  const changeTemplate = function () {
     fs.writeFile(path.join(__dirname, 'project-dist', 'index.html'), data, function (err) {
       if (err) {
         return console.log(err);

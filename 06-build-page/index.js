@@ -13,11 +13,6 @@ fs.readFile(path.join(__dirname, 'template.html'), function (err, data) {
         return console.log(err);
       }
     });
-    // fs.copyFile(path.resolve(__dirname, 'template.html'), path.resolve(__dirname, 'project-dist', 'index.html'), function (err) {
-    //   if (err) {
-    //     return console.log(err);
-    //   }
-    // });
   }
 
   const mergeStyles = function () {
@@ -103,6 +98,8 @@ fs.readFile(path.join(__dirname, 'template.html'), function (err, data) {
 
   const changeTemplate = function (template, templateHTML) {
     data = data.toString().replace(`{{${template}}}`, templateHTML);
+    fs.truncate(path.join(__dirname, 'project-dist', 'index.html'), function () {
+    });
     fs.writeFile(path.join(__dirname, 'project-dist', 'index.html'), data, function (err) {
       if (err) {
         return console.log(err);

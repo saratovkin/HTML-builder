@@ -9,6 +9,16 @@ const copyDir = function () {
     }
   });
 
+  fs.readdir(path.join(__dirname, 'files-copy'), function (err, files) {
+    files.forEach(item => {
+      fs.unlink(path.join(__dirname, 'files-copy', item), function (err) {
+        if (err) {
+          return console.log(err);
+        }
+      })
+    });
+  });
+
   fs.readdir(path.join(__dirname, 'files'), function (err, files) {
     if (err) {
       return console.log(err);
@@ -19,7 +29,7 @@ const copyDir = function () {
           return console.log(err);
         }
       });
-    })
+    });
   });
 };
 
